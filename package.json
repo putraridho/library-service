@@ -13,7 +13,7 @@
     "migration:run": "typeorm migration:run",
     "prepare": "husky",
     "staged": "lint-staged",
-    "start": "nest start",
+    "start": "node dist/main",
     "start:debug": "nest start --debug --watch",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
