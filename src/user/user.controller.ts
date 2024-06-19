@@ -1,9 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { UserService } from './users.service';
 
 @Controller('user')
 export class UserController {
-  @Get()
-  findById(): boolean {
-    return true;
-  }
+  constructor(private userService: UserService) {}
 }
