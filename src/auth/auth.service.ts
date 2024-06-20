@@ -64,6 +64,9 @@ export class AuthService {
         throw new UnauthorizedException();
       }
 
+      delete user.password;
+      delete user.is_verified;
+
       return user;
     } catch (err) {
       throw new HttpException(
@@ -71,5 +74,45 @@ export class AuthService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async loginGoogle(name: string, email: string): Promise<User> {
+    // -- CECK IF USER ALREADY EXISTS --
+    const selectRes = (await this.authRepository.query(
+      `SELECT
+        uid,
+        name,
+        email,
+        created_at,
+        updated_at,
+        deleted_at
+      FROM "user"
+      WHERE email = $1`,
+      [email],
+    )) as User[];
+
+    let user = selectRes.length > 0 ? selectRes[0] : null;
+
+    if (!user) {
+      // -- REGISTER USER --
+      const insertRes = (await this.authRepository.query(
+        `INSERT INTO "user" 
+          (name, email, is_verified) 
+        VALUES 
+          ($1, $2, TRUE)
+        RETURNING
+          uid,
+          name,
+          email,
+          created_at,
+          updated_at,
+          deleted_at`,
+        [name, email],
+      )) as [User];
+
+      user = insertRes[0];
+    }
+
+    return user;
   }
 }

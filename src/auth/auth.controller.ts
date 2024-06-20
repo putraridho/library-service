@@ -1,5 +1,16 @@
-import { Body, Controller, Post } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access -- allow it */
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from '@nestjs/passport';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
 import { Public } from './decorator/public.decorator';
@@ -41,6 +52,33 @@ export class AuthController {
     const user = await this.authService.login(
       loginDto.email.trim().toLowerCase(),
       loginDto.password.trim(),
+    );
+
+    const token = await this.jwtService.signAsync(user, {
+      secret: process.env.ENV_JWT_SECRET,
+    });
+
+    return token;
+  }
+
+  @Public()
+  @Get('login/google')
+  @UseGuards(AuthGuard('google'))
+  async loginGoogle(@Req() _req: any) {
+    //
+  }
+
+  @Public()
+  @Get('login/google/callback')
+  @UseGuards(AuthGuard('google'))
+  async loginGoogleCallback(@Req() req: any): Promise<JWT> {
+    if (!req.user) {
+      throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    }
+
+    const user = await this.authService.loginGoogle(
+      String(req?.user?.profile?.displayName ?? ''),
+      String(req?.user?.profile?.emails?.[0]?.value ?? ''),
     );
 
     const token = await this.jwtService.signAsync(user, {
