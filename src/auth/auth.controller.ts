@@ -76,10 +76,10 @@ export class AuthController {
       throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
     }
 
-    const user = await this.authService.loginGoogle(
-      String(req?.user?.profile?.displayName ?? ''),
-      String(req?.user?.profile?.emails?.[0]?.value ?? ''),
-    );
+    const user = await this.authService.loginGoogle({
+      name: String(req?.user?.profile?.displayName ?? ''),
+      email: String(req?.user?.profile?.emails?.[0]?.value ?? ''),
+    });
 
     const token = await this.jwtService.signAsync(user, {
       secret: process.env.ENV_JWT_SECRET,

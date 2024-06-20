@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
-import { User } from 'user/user.entity';
+import { User } from '../user/user.entity';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
@@ -28,8 +28,9 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<User> {
+    let res: User[] = [];
     try {
-      const res = (await this.authRepository.query(
+      res = (await this.authRepository.query(
         `SELECT 
           uid,
           name,
@@ -43,40 +44,37 @@ export class AuthService {
         WHERE email = $1`,
         [email.trim().toLowerCase()],
       )) as User[];
-
-      const user = res.length > 0 ? res[0] : null;
-
-      if (!user) {
-        throw new HttpException(
-          `${email} isn't registered`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      if (!user.is_verified) {
-        throw new HttpException(
-          `${email} isn't verified`,
-          HttpStatus.FORBIDDEN,
-        );
-      }
-
-      if (!(await argon2.verify(String(user.password), password))) {
-        throw new UnauthorizedException();
-      }
-
-      delete user.password;
-      delete user.is_verified;
-
-      return user;
     } catch (err) {
       throw new HttpException(
         'Something is wrong',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+
+    const user = res.length > 0 ? res[0] : null;
+
+    if (!user) {
+      throw new HttpException(
+        `${email} isn't registered`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (!user.is_verified) {
+      throw new HttpException(`${email} isn't verified`, HttpStatus.FORBIDDEN);
+    }
+
+    if (!(await argon2.verify(String(user.password), password))) {
+      throw new UnauthorizedException();
+    }
+
+    delete user.password;
+    delete user.is_verified;
+
+    return user;
   }
 
-  async loginGoogle(name: string, email: string): Promise<User> {
+  async loginGoogle(registerDto: RegisterDto): Promise<User> {
     // -- CECK IF USER ALREADY EXISTS --
     const selectRes = (await this.authRepository.query(
       `SELECT
@@ -88,7 +86,7 @@ export class AuthService {
         deleted_at
       FROM "user"
       WHERE email = $1`,
-      [email],
+      [registerDto.email],
     )) as User[];
 
     let user = selectRes.length > 0 ? selectRes[0] : null;
@@ -107,7 +105,7 @@ export class AuthService {
           created_at,
           updated_at,
           deleted_at`,
-        [name, email],
+        [registerDto.name, registerDto.email],
       )) as [User];
 
       user = insertRes[0];
